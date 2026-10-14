@@ -7,10 +7,17 @@ export default {
   theme: {
     extend: {
       colors: {
-        "xero-blue": "#00b7e8",
-        "xero-darkBlue": "#007cb2",
-        "xero-green": "#1abc9c",
-        "xero-darkGreen": "#16a085",
+        "bloom-navy": "#0e3b5e",
+        "bloom-navy-deep": "#0a2c47",
+        "bloom-teal": "#00cba9",
+        "bloom-teal-deep": "#00a888",
+      },
+      // Same lighter weights as apps/website — font-bold/font-extrabold read
+      // too heavy at Tailwind's defaults.
+      fontWeight: {
+        semibold: "450",
+        bold: "500",
+        extrabold: "600",
       },
     },
   },

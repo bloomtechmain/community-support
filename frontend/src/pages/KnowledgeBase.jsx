@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { FaBook, FaSearch, FaTimes, FaArrowRight, FaChevronRight, FaDownload, FaFilePdf } from 'react-icons/fa';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import { FaBook, FaChevronRight, FaSearch, FaInfoCircle } from 'react-icons/fa';
+import NavyBackdrop from '../components/NavyBackdrop';
+import {
+  PlanGuides, FeatureGuides, HowBloomWorks, ProductScreens, Foundations, GuidesCta,
+} from '../components/guides/GuideSections';
+import WebsiteLink from '../components/WebsiteLink';
 import API_URL from '../api';
-import kbLightbulbImg from '../assets/kb-lightbulb-knowledge.jpg';
+import { ALL_PDF_GUIDES, searchPdfGuides } from '../guides';
+import { containerClass, fadeUp, inView, popIn, stagger } from '../motion';
 
 const snippet = (body, term) => {
   const clean = body.replace(/\*\*/g, '');
@@ -56,117 +63,206 @@ const KnowledgeBase = () => {
   }, [query, topicFilter]);
 
   const isSearchMode = query.trim().length > 0;
+  const totalArticles = topics.reduce((sum, t) => sum + Number(t.article_count || 0), 0);
+  // PDF guides are matched in the browser; a topic filter only narrows the written articles.
+  const pdfResults = isSearchMode && !topicFilter ? searchPdfGuides(query) : [];
+  const resultCount = results.length + pdfResults.length;
 
   return (
     <div className="font-sans overflow-x-hidden bg-white">
       <Header />
 
-      <section className="relative min-h-[35vh] lg:min-h-[55vh] flex items-center pt-16 sm:pt-20 pb-10 sm:pb-14 px-5 sm:px-6 md:px-12 lg:px-20 overflow-hidden bg-[#0e3b5e]">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 flex justify-center">
-            <img
-              src={kbLightbulbImg}
-              alt=""
-              className="w-full max-w-[1600px] h-full object-cover object-center opacity-50 grayscale"
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-            />
-          </div>
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#0e3b5e]/85 via-[#1c3bd8]/40 to-[#0e3b5e]/90" />
-        </div>
-        <div className="max-w-5xl mx-auto w-full relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#00cba9]/10 border border-[#00cba9]/30 text-[#00cba9] font-bold text-xs sm:text-sm mb-6 tracking-wide uppercase backdrop-blur-md">
-            <FaBook /> Knowledge Base
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-4 text-white">
-            Our own Q&A, by topic
-          </h1>
-          <p className="text-base sm:text-lg text-blue-100/80 max-w-2xl mx-auto leading-relaxed">
-            Pick a topic below to see step-by-step answers for that part of Bloom.
-          </p>
-        </div>
-      </section>
+      {/* Hero — headline and search beside two filled counters */}
+      <section className="relative pt-36 pb-20 overflow-hidden bg-bloom-navy">
+        <NavyBackdrop />
+        <div className={`${containerClass} grid grid-cols-1 lg:grid-cols-2 gap-14 items-center`}>
+          <motion.div variants={stagger(0.12)} initial="hidden" animate="visible">
+            <motion.p variants={fadeUp} className="text-xs md:text-sm font-bold tracking-[0.3em] text-bloom-teal uppercase mb-4 inline-flex items-center gap-2">
+              <FaBook /> Guides &amp; Knowledge Base
+            </motion.p>
+            <motion.h1 variants={fadeUp} className="text-4xl md:text-6xl font-extrabold leading-tight mb-6 text-white">
+              Master your books,<br />
+              <span className="text-bloom-teal">one guide at a time.</span>
+            </motion.h1>
+            <motion.p variants={fadeUp} className="text-lg text-blue-50 max-w-xl mb-8 leading-relaxed">
+              Download the PDF guides for your plan and for each feature, or search the written answers from our team.
+            </motion.p>
 
-      <section className="py-12 sm:py-16 px-5 sm:px-6 md:px-12 lg:px-20 bg-gray-50">
-        <div className="max-w-5xl mx-auto">
-          <div className="mb-8 flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl p-4 sm:p-5 text-sm text-gray-600">
-            <FaInfoCircle className="text-[#00cba9] mt-0.5 flex-shrink-0" />
-            <p>
-              <span className="font-semibold text-[#0e3b5e]">How it works: </span>
-              Search for a keyword to jump straight to a matching article from any topic, optionally
-              narrowed with the topic filter — or clear the search box and browse by topic below.
-            </p>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 mb-10">
-            <div className="relative flex-1">
-              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
+            <motion.div variants={fadeUp} className="relative max-w-xl">
+              <FaSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-600" />
               <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder="Search articles..."
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#00cba9] focus:ring-2 focus:ring-[#00cba9]/20 outline-none text-sm transition-all"
+                placeholder="Search guides, e.g. reconcile, invoice, payroll…"
+                aria-label="Search guides"
+                className="w-full pl-14 pr-14 py-5 rounded-2xl bg-white text-bloom-navy placeholder-gray-400 text-lg font-semibold focus:outline-none focus:ring-4 focus:ring-bloom-teal/40 transition-all"
               />
-            </div>
-            <select
-              value={topicFilter}
-              onChange={(e) => setTopicFilter(e.target.value)}
-              className="px-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#00cba9] focus:ring-2 focus:ring-[#00cba9]/20 outline-none text-sm transition-all"
-            >
-              <option value="">All topics</option>
-              {topics.map((t) => (
-                <option key={t.slug} value={t.slug}>{t.name}</option>
-              ))}
-            </select>
-          </div>
-
-          {isSearchMode ? (
-            searching ? (
-              <p className="text-gray-500 text-center py-12">Searching...</p>
-            ) : results.length === 0 && searched ? (
-              <p className="text-gray-500 text-center py-12">No articles match "{query}".</p>
-            ) : (
-              <div className="space-y-3">
-                {results.map((a) => (
-                  <Link
-                    key={a.id}
-                    to={`/kb/${a.topic_slug}/${a.id}`}
-                    className="block bg-white p-5 rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg hover:border-[#00cba9]/30 transition-all no-underline"
-                  >
-                    <div className="flex items-center justify-between gap-3 mb-1">
-                      <h3 className="font-bold text-[#0e3b5e]">{a.title}</h3>
-                      <FaChevronRight className="text-[#00cba9] flex-shrink-0" />
-                    </div>
-                    <p className="text-xs text-[#00cba9] font-semibold uppercase tracking-wide mb-1">{a.topic_name}</p>
-                    <p className="text-sm text-gray-500">{snippet(a.body, query)}</p>
-                  </Link>
-                ))}
-              </div>
-            )
-          ) : loading ? (
-            <p className="text-gray-500 text-center py-12">Loading topics...</p>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-5">
-              {topics.map((t) => (
-                <Link
-                  key={t.id}
-                  to={`/kb/${t.slug}`}
-                  className="group relative bg-white p-6 rounded-2xl shadow-md border border-[#00cba9]/25 hover:shadow-lg hover:-translate-y-0.5 transition-all no-underline flex items-center justify-between overflow-hidden"
+              {isSearchMode && (
+                <button
+                  type="button"
+                  onClick={() => setQuery('')}
+                  aria-label="Clear search"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-gray-100 text-bloom-navy flex items-center justify-center hover:bg-gray-200 transition-colors"
                 >
-                  <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-[#00cba9] to-[#1c3bd8]" />
-                  <div>
-                    <h3 className="font-bold text-[#0e3b5e] text-lg">{t.name}</h3>
-                    <p className="text-sm text-gray-500">{t.article_count} {t.article_count === 1 ? 'article' : 'articles'}</p>
-                  </div>
-                  <FaChevronRight className="text-[#00cba9] transition-transform group-hover:translate-x-1" />
-                </Link>
+                  <FaTimes size={12} />
+                </button>
+              )}
+            </motion.div>
+
+            <motion.div variants={fadeUp} className="flex flex-wrap gap-x-6 gap-y-2 mt-6 text-sm font-bold">
+              {[['#plan-guides', 'Plan guides'], ['#feature-guides', 'Feature guides'], ['#topics', 'Browse by topic']].map(([href, label]) => (
+                <a key={href} href={href} onClick={() => setQuery('')} className="group inline-flex items-center gap-2 text-white hover:text-bloom-teal transition-colors">
+                  {label} <FaArrowRight size={10} className="group-hover:translate-x-1 transition-transform" />
+                </a>
               ))}
-            </div>
-          )}
+            </motion.div>
+            <motion.div variants={fadeUp} className="mt-4 text-sm">
+              <WebsiteLink path="/resources/guides" tone="dark">Open the Guides page on bloomaudit.com</WebsiteLink>
+            </motion.div>
+          </motion.div>
+
+          <motion.div variants={stagger(0.15, 0.3)} initial="hidden" animate="visible" className="flex items-center justify-center lg:justify-end gap-5 sm:gap-8">
+            <motion.div variants={popIn} className="w-36 h-36 sm:w-52 sm:h-52 rounded-full bg-bloom-teal text-white flex flex-col items-center justify-center text-center">
+              <span className="text-5xl sm:text-7xl font-extrabold leading-none">{ALL_PDF_GUIDES.length}</span>
+              <span className="text-xs sm:text-sm font-bold mt-2">PDF guides</span>
+            </motion.div>
+            <motion.div variants={popIn} className="w-36 h-36 sm:w-52 sm:h-52 rounded-full bg-white/10 text-white flex flex-col items-center justify-center text-center">
+              <span className="text-5xl sm:text-7xl font-extrabold leading-none">{loading ? '–' : totalArticles}</span>
+              <span className="text-xs sm:text-sm font-bold mt-2 text-bloom-teal">written answers</span>
+            </motion.div>
+          </motion.div>
         </div>
       </section>
+
+      {isSearchMode ? (
+        <section className="relative py-16 bg-white overflow-hidden min-h-[50vh]">
+          <div className={`${containerClass} max-w-5xl mx-auto`}>
+            {/* Narrow the written answers to one topic (PDF guides are not filed by topic) */}
+            <div className="flex flex-wrap gap-2 mb-8" role="group" aria-label="Filter by topic">
+              {[{ slug: '', name: 'All topics' }, ...topics].map((t) => {
+                const active = topicFilter === t.slug;
+                return (
+                  <button
+                    key={t.slug || 'all'}
+                    type="button"
+                    aria-pressed={active}
+                    onClick={() => setTopicFilter(t.slug)}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${active ? 'bg-bloom-navy text-white' : 'bg-gray-100 text-bloom-navy hover:bg-gray-200'}`}
+                  >
+                    {t.name}
+                  </button>
+                );
+              })}
+            </div>
+
+            <p className="text-lg font-bold text-bloom-navy pb-5 border-b-2 border-bloom-navy">
+              {searching ? 'Searching…' : `${resultCount} result${resultCount !== 1 ? 's' : ''} for “${query}”`}
+            </p>
+
+            {!searching && searched && resultCount === 0 && (
+              <div className="py-16 flex flex-col items-center text-center">
+                <span className="w-24 h-24 rounded-full bg-gray-100 text-bloom-navy flex items-center justify-center text-4xl mb-6">
+                  <FaBook />
+                </span>
+                <p className="text-lg text-gray-800 max-w-md mb-6">No guide covers that yet. Try another word, or ask the community.</p>
+                <Link to="/community?ask=1" className="group text-bloom-teal-deep font-bold inline-flex items-center gap-2">
+                  Ask in the forum <FaArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                </Link>
+              </div>
+            )}
+
+            {/* Matching PDF guides first, as downloads */}
+            {pdfResults.map((g) => (
+              <a key={g.file} href={g.file} download target="_blank" rel="noopener noreferrer" className="group flex items-start gap-5 py-6 border-b border-gray-200">
+                <span className="flex-shrink-0 w-12 h-12 rounded-full bg-bloom-teal text-white flex items-center justify-center">
+                  <FaFilePdf />
+                </span>
+                <span className="flex-grow min-w-0">
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-bloom-teal-deep mb-1">{g.kind} · PDF</span>
+                  <span className="block text-lg font-bold text-bloom-navy group-hover:text-bloom-teal-deep transition-colors mb-1">{g.title}</span>
+                  <span className="block text-gray-700 leading-relaxed">{g.desc}</span>
+                </span>
+                <span className="flex-shrink-0 mt-3 inline-flex items-center gap-2 text-sm font-bold text-bloom-teal-deep">
+                  <FaDownload size={12} /> <span className="hidden sm:inline">Download</span>
+                </span>
+              </a>
+            ))}
+
+            {results.map((a) => (
+              <Link key={a.id} to={`/kb/${a.topic_slug}/${a.id}`} className="group flex items-start gap-5 py-6 border-b border-gray-200">
+                <span className="flex-shrink-0 w-12 h-12 rounded-full bg-bloom-navy text-bloom-teal flex items-center justify-center">
+                  <FaBook />
+                </span>
+                <span className="flex-grow min-w-0">
+                  <span className="block text-[11px] font-bold uppercase tracking-wider text-bloom-teal-deep mb-1">{a.topic_name}</span>
+                  <span className="block text-lg font-bold text-bloom-navy group-hover:text-bloom-teal-deep transition-colors mb-1">{a.title}</span>
+                  <span className="block text-gray-700 leading-relaxed">{snippet(a.body, query)}</span>
+                </span>
+                <span className="flex-shrink-0 mt-3 w-9 h-9 rounded-full bg-gray-100 text-bloom-navy flex items-center justify-center group-hover:bg-bloom-teal group-hover:text-white transition-colors">
+                  <FaChevronRight size={11} />
+                </span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      ) : (
+        <>
+          <PlanGuides />
+          <FeatureGuides />
+
+          {/* Written answers, by topic: big filled tiles that turn navy on hover */}
+          <section id="topics" className="relative py-20 bg-gray-50 overflow-hidden scroll-mt-20">
+            <div aria-hidden="true" className="hidden lg:block absolute -top-56 -right-56 w-[620px] h-[620px] rounded-full bg-bloom-teal/10 pointer-events-none" />
+            <div className={containerClass}>
+              <motion.div variants={stagger(0.1)} {...inView} className="max-w-3xl mb-12">
+                <motion.p variants={fadeUp} className="text-bloom-teal-deep font-bold tracking-widest text-sm uppercase mb-2 flex items-center gap-2">
+                  <span className="w-6 h-px bg-bloom-teal-deep" /> Written answers
+                </motion.p>
+                <motion.h2 variants={fadeUp} className="text-4xl md:text-5xl font-extrabold text-bloom-navy leading-tight mb-4">
+                  Browse by topic
+                </motion.h2>
+                <motion.p variants={fadeUp} className="text-lg text-gray-800 leading-relaxed">
+                  Short answers from our team, read in the browser. Pick the part of Bloom you are working in.
+                </motion.p>
+              </motion.div>
+
+              {loading ? (
+                <p className="text-gray-700">Loading topics…</p>
+              ) : topics.length === 0 ? (
+                <p className="text-lg text-gray-800">No written answers have been published yet.</p>
+              ) : (
+                <motion.div variants={stagger(0.06)} {...inView} className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+                  {topics.map((t, i) => (
+                    <motion.div key={t.id} variants={fadeUp}>
+                      <Link
+                        to={`/kb/${t.slug}`}
+                        className="group h-full flex flex-col rounded-2xl p-5 sm:p-6 bg-white text-bloom-navy hover:bg-bloom-navy hover:text-white transition-colors duration-300"
+                      >
+                        <span className="flex items-center justify-between mb-10">
+                          <span className="font-mono text-sm font-bold text-bloom-teal-deep group-hover:text-bloom-teal transition-colors">
+                            {String(i + 1).padStart(2, '0')}
+                          </span>
+                          <FaArrowRight size={12} className="opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 text-bloom-teal transition-all duration-300" />
+                        </span>
+                        <span className="block text-xl font-extrabold leading-tight mb-1">{t.name}</span>
+                        <span className="block text-sm text-gray-700 group-hover:text-blue-100 transition-colors">
+                          {t.article_count} {Number(t.article_count) === 1 ? 'answer' : 'answers'}
+                        </span>
+                      </Link>
+                    </motion.div>
+                  ))}
+                </motion.div>
+              )}
+            </div>
+          </section>
+
+          <HowBloomWorks />
+          <ProductScreens />
+          <Foundations />
+          <GuidesCta />
+        </>
+      )}
 
       <Footer />
     </div>

@@ -12,3 +12,13 @@ body {
   min-width: 320px;
   min-height: 100vh;
 }
+
+/* Hide the scrollbar while keeping scroll working, same as apps/website */
+html {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar {
+  display: none;
+}

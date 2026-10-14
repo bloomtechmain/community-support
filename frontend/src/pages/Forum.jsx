@@ -1,22 +1,32 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
+import { FaSearch, FaTimes, FaChevronDown, FaArrowRight, FaCheck, FaPen, FaComments } from 'react-icons/fa';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import {
-  FaComments, FaUser, FaTag, FaCommentDots, FaCheckCircle, FaPaperPlane,
-  FaReply, FaSearch, FaInfoCircle, FaChevronDown,
-} from 'react-icons/fa';
+import NavyBackdrop from '../components/NavyBackdrop';
 import API_URL from '../api';
-import forumChatHandsImg from '../assets/forum-chat-hands.jpg';
+import { containerClass, fadeUp, stagger } from '../motion';
+
+const FILTERS = [
+  { key: 'all', label: 'Newest' },
+  { key: 'most-replies', label: 'Most replies' },
+  { key: 'unanswered', label: 'Unanswered' },
+];
+
+const inputClass = 'w-full px-4 py-3 rounded-xl bg-white border border-gray-300 text-bloom-navy placeholder-gray-400 focus:outline-none focus:border-bloom-teal focus:ring-4 focus:ring-bloom-teal/20 transition-all';
+
+const replyLabel = (n) => `${n} ${Number(n) === 1 ? 'reply' : 'replies'}`;
 
 const Forum = () => {
+  const [searchParams] = useSearchParams();
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(searchParams.get('ask') === '1');
   const [formData, setFormData] = useState({ name: '', title: '', body: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null); // 'success' | 'error'
+  const formRef = useRef(null);
 
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('all');
@@ -44,6 +54,20 @@ const Forum = () => {
     const timeout = setTimeout(() => loadQuestions(search, filter), 300);
     return () => clearTimeout(timeout);
   }, [search, filter]);
+
+  // Arriving from an "Ask a question" link (?ask=1) opens the form and scrolls to it.
+  useEffect(() => {
+    if (searchParams.get('ask') === '1') {
+      setShowForm(true);
+      setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 350);
+    }
+  }, [searchParams]);
+
+  const openForm = () => {
+    setSubmitStatus(null);
+    setShowForm(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+  };
 
   const toggleExpand = (id) => {
     if (expandedId === id) {
@@ -97,230 +121,265 @@ const Forum = () => {
     }
   };
 
+  const isSearching = search.trim().length > 0;
+
   return (
     <div className="font-sans overflow-x-hidden bg-white">
       <Header />
 
-      <section className="relative min-h-[35vh] lg:min-h-[55vh] flex items-center pt-16 sm:pt-20 pb-10 sm:pb-14 px-5 sm:px-6 md:px-12 lg:px-20 overflow-hidden bg-[#0e3b5e]">
-        <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 flex justify-center">
-            <img
-              src={forumChatHandsImg}
-              alt=""
-              className="w-full max-w-[1600px] h-full object-cover object-center opacity-50 grayscale"
-              loading="eager"
-              fetchPriority="high"
-              decoding="async"
-            />
-          </div>
-          <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-[#0e3b5e]/85 via-[#1c3bd8]/40 to-[#0e3b5e]/90" />
-        </div>
-        <div className="max-w-5xl mx-auto w-full relative z-10 text-center">
-          <div className="inline-flex items-center gap-2 px-3.5 py-2 rounded-full bg-[#00cba9]/10 border border-[#00cba9]/30 text-[#00cba9] font-bold text-xs sm:text-sm mb-6 tracking-wide uppercase backdrop-blur-md">
+      {/* Hero — headline and a large search box */}
+      <section className="relative pt-36 pb-20 overflow-hidden bg-bloom-navy">
+        <NavyBackdrop />
+        <motion.div variants={stagger(0.12)} initial="hidden" animate="visible" className={`${containerClass} max-w-5xl mx-auto`}>
+          <motion.p variants={fadeUp} className="text-xs md:text-sm font-bold tracking-[0.3em] text-bloom-teal uppercase mb-4 inline-flex items-center gap-2">
             <FaComments /> Community Forum
-          </div>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold leading-tight mb-4 text-white">
-            Ask other people using Bloom
-          </h1>
-          <p className="text-base sm:text-lg text-blue-100/80 max-w-2xl mx-auto leading-relaxed">
-            No account needed — anyone can post a question or reply.
-          </p>
-        </div>
+          </motion.p>
+          <motion.h1 variants={fadeUp} className="text-4xl md:text-6xl font-extrabold leading-tight mb-4 text-white">
+            Ask other people<br />
+            <span className="text-bloom-teal">who use Bloom.</span>
+          </motion.h1>
+          <motion.p variants={fadeUp} className="text-lg text-blue-50 mb-8 max-w-2xl leading-relaxed">
+            No account needed. Anyone can post a question or reply to one.
+          </motion.p>
+
+          <motion.div variants={fadeUp} className="relative max-w-2xl">
+            <FaSearch className="absolute left-6 top-1/2 -translate-y-1/2 text-gray-600" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search questions, e.g. bank feed, invoice, payroll…"
+              aria-label="Search questions"
+              className="w-full pl-14 pr-14 py-5 rounded-2xl bg-white text-bloom-navy placeholder-gray-400 text-lg font-semibold focus:outline-none focus:ring-4 focus:ring-bloom-teal/40 transition-all"
+            />
+            {isSearching && (
+              <button
+                type="button"
+                onClick={() => setSearch('')}
+                aria-label="Clear search"
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-gray-100 text-bloom-navy flex items-center justify-center hover:bg-gray-200 transition-colors"
+              >
+                <FaTimes size={12} />
+              </button>
+            )}
+          </motion.div>
+        </motion.div>
       </section>
 
-      <section className="py-12 sm:py-16 px-5 sm:px-6 md:px-12 lg:px-20 bg-gray-50">
-        <div className="max-w-4xl mx-auto">
-          <div className="mb-8 flex items-start gap-3 bg-blue-50 border border-blue-100 rounded-2xl p-4 sm:p-5 text-sm text-gray-600">
-            <FaInfoCircle className="text-[#00cba9] mt-0.5 flex-shrink-0" />
-            <p>
-              <span className="font-semibold text-[#0e3b5e]">How it works: </span>
-              Search or filter the questions below, or click "Ask a question" to post your own — no
-              account needed. Click any question to preview its replies, then open the full thread to
-              read everything or reply.
-            </p>
-          </div>
+      <section className="relative py-16 bg-white overflow-hidden">
+        <div aria-hidden="true" className="hidden lg:block absolute -top-56 -right-56 w-[620px] h-[620px] rounded-full bg-bloom-teal/10 pointer-events-none" />
 
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl sm:text-2xl font-bold text-[#0e3b5e]">Recent questions</h2>
-            <button
-              onClick={() => setShowForm((v) => !v)}
-              className="inline-flex items-center gap-2 bg-[#00cba9] hover:bg-[#00b596] text-white font-bold py-3 px-6 rounded-full text-sm sm:text-base shadow-lg hover:shadow-xl transition-all"
-            >
-              {showForm ? 'Cancel' : 'Ask a question'}
-            </button>
-          </div>
-
-          <div className="flex flex-col sm:flex-row gap-3 mb-8">
-            <div className="relative flex-1">
-              <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm" />
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search questions..."
-                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#00cba9] focus:ring-2 focus:ring-[#00cba9]/20 outline-none text-sm transition-all"
-              />
-            </div>
-            <select
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              className="px-4 py-2.5 rounded-xl bg-white border border-gray-200 focus:border-[#00cba9] focus:ring-2 focus:ring-[#00cba9]/20 outline-none text-sm transition-all"
-            >
-              <option value="all">Newest first</option>
-              <option value="most-replies">Most replies</option>
-              <option value="unanswered">Unanswered only</option>
-            </select>
-          </div>
-
-          <AnimatePresence>
-            {showForm && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden mb-10"
-              >
-                <div className="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-gray-100">
-                  {submitStatus === 'success' ? (
-                    <div className="text-center py-8">
-                      <FaCheckCircle className="text-3xl text-[#00cba9] mb-4 mx-auto" />
-                      <h3 className="text-xl font-bold text-[#0e3b5e] mb-2">Question posted!</h3>
-                      <button
-                        onClick={() => { setSubmitStatus(null); setShowForm(false); }}
-                        className="text-[#00cba9] font-bold hover:underline"
-                      >
-                        Back to the list
-                      </button>
+        <div className={`${containerClass} max-w-5xl mx-auto`}>
+          {/* Ask form */}
+          <div ref={formRef} className="scroll-mt-24">
+            <AnimatePresence initial={false}>
+              {showForm && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mb-14 pb-12 border-b border-gray-200 grid grid-cols-1 lg:grid-cols-12 gap-10">
+                    <div className="lg:col-span-4">
+                      <p className="text-bloom-teal-deep font-bold tracking-widest text-sm uppercase mb-2 flex items-center gap-2">
+                        <span className="w-6 h-px bg-bloom-teal-deep" /> New question
+                      </p>
+                      <h2 className="text-3xl font-extrabold text-bloom-navy leading-tight mb-4">Ask the community</h2>
+                      <p className="text-gray-800 leading-relaxed">
+                        Say which screen you were on, what you clicked, and what happened. A clear title gets an answer faster.
+                      </p>
                     </div>
-                  ) : (
-                    <form onSubmit={handleSubmit} className="space-y-5">
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                          <FaUser className="text-[#00cba9]" /> Your Name
-                        </label>
-                        <input
-                          type="text" name="name" required value={formData.name} onChange={handleChange}
-                          placeholder="John Doe"
-                          className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-[#00cba9] focus:ring-2 focus:ring-[#00cba9]/20 outline-none transition-all"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                          <FaTag className="text-[#00cba9]" /> Question title
-                        </label>
-                        <input
-                          type="text" name="title" required value={formData.title} onChange={handleChange}
-                          placeholder="What's your question about?"
-                          className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-[#00cba9] focus:ring-2 focus:ring-[#00cba9]/20 outline-none transition-all"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                          <FaCommentDots className="text-[#00cba9]" /> Details
-                        </label>
-                        <textarea
-                          name="body" rows="5" required value={formData.body} onChange={handleChange}
-                          placeholder="Give as much detail as you can..."
-                          className="w-full px-4 py-3 rounded-xl bg-gray-50 border border-gray-200 focus:border-[#00cba9] focus:ring-2 focus:ring-[#00cba9]/20 outline-none transition-all resize-none"
-                        />
-                      </div>
-                      {submitStatus === 'error' && (
-                        <div className="p-3 bg-red-50 text-red-600 rounded-lg text-sm text-center">
-                          Something went wrong. Please try again.
-                        </div>
-                      )}
-                      <button
-                        type="submit" disabled={isSubmitting}
-                        className="inline-flex items-center justify-center gap-2 bg-[#00cba9] hover:bg-[#00b596] text-white font-bold py-3.5 px-8 rounded-full text-base shadow-xl transition-all disabled:opacity-70"
-                      >
-                        {isSubmitting ? 'Posting...' : (<>Post Question <FaPaperPlane /></>)}
-                      </button>
-                    </form>
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
 
+                    <div className="lg:col-span-8">
+                      {submitStatus === 'success' ? (
+                        <div className="h-full flex flex-col items-start justify-center gap-4 py-6">
+                          <span className="w-16 h-16 rounded-full bg-bloom-teal text-white flex items-center justify-center text-xl">
+                            <FaCheck />
+                          </span>
+                          <h3 className="text-2xl font-extrabold text-bloom-navy">Your question is up.</h3>
+                          <p className="text-gray-800">It is at the top of the list below. Replies will appear in its thread.</p>
+                          <div className="flex items-center gap-6">
+                            <button type="button" onClick={() => { setSubmitStatus(null); setShowForm(false); }} className="group text-bloom-teal-deep font-bold inline-flex items-center gap-2">
+                              Back to the list <FaArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+                            <button type="button" onClick={() => setSubmitStatus(null)} className="text-gray-700 font-semibold hover:text-bloom-navy">
+                              Ask another
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        <form onSubmit={handleSubmit} className="space-y-5">
+                          <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
+                            <label className="block sm:col-span-1">
+                              <span className="block text-sm font-bold text-bloom-navy mb-2">Your name</span>
+                              <input type="text" name="name" required value={formData.name} onChange={handleChange} className={inputClass} />
+                            </label>
+                            <label className="block sm:col-span-2">
+                              <span className="block text-sm font-bold text-bloom-navy mb-2">Question</span>
+                              <input
+                                type="text" name="title" required value={formData.title} onChange={handleChange}
+                                placeholder="e.g. How do I undo a bank reconciliation?"
+                                className={inputClass}
+                              />
+                            </label>
+                          </div>
+                          <label className="block">
+                            <span className="block text-sm font-bold text-bloom-navy mb-2">Details</span>
+                            <textarea name="body" rows="6" required value={formData.body} onChange={handleChange} className={`${inputClass} resize-y`} />
+                          </label>
+                          {submitStatus === 'error' && (
+                            <p className="text-sm text-red-700">That did not go through. Check your connection and try again.</p>
+                          )}
+                          <div className="flex items-center gap-6">
+                            <button
+                              type="submit" disabled={isSubmitting}
+                              className="group px-8 py-3.5 bg-bloom-teal text-white rounded-xl font-bold hover:bg-bloom-teal-deep transition-colors inline-flex items-center gap-2 disabled:opacity-60"
+                            >
+                              {isSubmitting ? 'Posting…' : (<>Post question <FaArrowRight size={12} className="group-hover:translate-x-1 transition-transform" /></>)}
+                            </button>
+                            <button type="button" onClick={() => setShowForm(false)} className="text-gray-700 font-semibold hover:text-bloom-navy">
+                              Cancel
+                            </button>
+                          </div>
+                        </form>
+                      )}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Sort tabs + ask button */}
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-5 pb-5 border-b-2 border-bloom-navy">
+            <div className="flex items-center gap-2" role="tablist" aria-label="Sort questions">
+              {FILTERS.map((f) => {
+                const active = filter === f.key;
+                return (
+                  <button
+                    key={f.key}
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    onClick={() => setFilter(f.key)}
+                    className={`px-4 py-2 rounded-full text-sm font-bold transition-colors ${active ? 'bg-bloom-navy text-white' : 'bg-gray-100 text-bloom-navy hover:bg-gray-200'}`}
+                  >
+                    {f.label}
+                  </button>
+                );
+              })}
+            </div>
+            {!showForm && (
+              <button
+                type="button"
+                onClick={openForm}
+                className="group self-start sm:self-auto px-6 py-3 bg-bloom-teal text-white rounded-xl font-bold hover:bg-bloom-teal-deep transition-colors inline-flex items-center gap-2"
+              >
+                <FaPen size={12} /> Ask a question
+              </button>
+            )}
+          </div>
+
+          {/* Question list — numbered rows on hairlines */}
           {loading ? (
-            <p className="text-gray-500 text-center py-12">Loading questions...</p>
+            <p className="text-gray-700 py-12">Loading questions…</p>
           ) : questions.length === 0 ? (
-            <p className="text-gray-500 text-center py-12">
-              {search ? 'No questions match your search.' : 'No questions yet — be the first to ask one.'}
-            </p>
+            <div className="py-16 flex flex-col items-center text-center">
+              <span className="w-24 h-24 rounded-full bg-gray-100 text-bloom-navy flex items-center justify-center text-4xl mb-6">
+                <FaComments />
+              </span>
+              <p className="text-lg text-gray-800 max-w-md mb-6">
+                {isSearching
+                  ? <>Nothing matched &ldquo;{search}&rdquo;. Try another word, or ask it yourself.</>
+                  : filter === 'unanswered' ? 'Every question has at least one reply.' : 'No questions yet. Be the first to ask one.'}
+              </p>
+              {!showForm && (
+                <button type="button" onClick={openForm} className="group text-bloom-teal-deep font-bold inline-flex items-center gap-2">
+                  Ask a question <FaArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
+                </button>
+              )}
+            </div>
           ) : (
-            <div className="space-y-4">
-              {questions.map((q) => {
+            <div>
+              {isSearching && (
+                <p className="text-sm text-gray-700 pt-5">
+                  {questions.length} result{questions.length !== 1 ? 's' : ''} for &ldquo;{search}&rdquo;
+                </p>
+              )}
+              {questions.map((q, index) => {
                 const cache = threadCache[q.id];
                 const isOpen = expandedId === q.id;
+                const unanswered = Number(q.reply_count) === 0;
                 return (
-                  <div
-                    key={q.id}
-                    className="relative bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-md transition-all overflow-hidden"
-                  >
-                    <div className="absolute left-0 top-0 h-full w-1 bg-[#00cba9]/60" />
+                  <div key={q.id} className="border-b border-gray-200">
                     <button
                       type="button"
                       onClick={() => toggleExpand(q.id)}
-                      className="w-full text-left pl-6 pr-5 py-5 sm:pl-7 sm:pr-6 sm:py-6 flex items-start justify-between gap-3 bg-transparent border-none cursor-pointer"
+                      aria-expanded={isOpen}
+                      className="group w-full flex items-center gap-4 sm:gap-5 text-left py-5"
                     >
-                      <div>
-                        <h3 className="font-bold text-[#0e3b5e] text-lg mb-1">{q.title}</h3>
-                        <div className="flex items-center gap-4 text-sm text-gray-500 flex-wrap">
-                          <span>by {q.name}</span>
-                          <span>·</span>
-                          <span>{new Date(q.created_at).toLocaleDateString()}</span>
-                          <span>·</span>
-                          <span className="inline-flex items-center gap-1">
-                            <FaReply /> {q.reply_count} {q.reply_count === 1 ? 'reply' : 'replies'}
-                          </span>
-                        </div>
-                      </div>
-                      <FaChevronDown
-                        className={`text-gray-400 mt-1 flex-shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-                      />
+                      <span className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center font-mono text-sm font-bold transition-colors duration-300 ${
+                        isOpen ? 'bg-bloom-teal text-white' : 'bg-bloom-navy text-white group-hover:bg-bloom-teal'
+                      }`}>
+                        {String(index + 1).padStart(2, '0')}
+                      </span>
+                      <span className="flex-grow min-w-0">
+                        <span className="block text-lg font-bold text-bloom-navy">{q.title}</span>
+                        <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-700 mt-0.5">
+                          <span>{q.name}</span>
+                          <span className="text-gray-300">/</span>
+                          <span>{new Date(q.created_at).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                          <span className="text-gray-300">/</span>
+                          {unanswered ? (
+                            <span className="px-2.5 py-0.5 rounded-full bg-amber-400 text-bloom-navy text-xs font-bold">No replies yet</span>
+                          ) : (
+                            <span className="font-semibold text-bloom-teal-deep">{replyLabel(q.reply_count)}</span>
+                          )}
+                        </span>
+                      </span>
+                      <motion.span
+                        animate={{ rotate: isOpen ? 180 : 0 }}
+                        transition={{ duration: 0.3 }}
+                        className={`flex-shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${isOpen ? 'bg-bloom-teal text-white' : 'bg-gray-100 text-bloom-navy'}`}
+                      >
+                        <FaChevronDown size={12} />
+                      </motion.span>
                     </button>
 
-                    <AnimatePresence>
+                    <AnimatePresence initial={false}>
                       {isOpen && (
                         <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="overflow-hidden border-t border-gray-100"
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="overflow-hidden"
                         >
-                          <div className="p-5 sm:p-6 bg-gray-50">
-                            <p className="text-gray-700 text-sm mb-4 whitespace-pre-wrap">{q.body}</p>
+                          <div className="pl-16 sm:pl-[68px] pr-4 sm:pr-14 pb-7">
+                            <p className="text-gray-800 leading-relaxed whitespace-pre-wrap mb-5">{q.body}</p>
 
                             {cache?.loading ? (
-                              <p className="text-gray-400 text-sm">Loading replies...</p>
+                              <p className="text-sm text-gray-600 mb-5">Loading replies…</p>
                             ) : cache?.error ? (
-                              <p className="text-red-500 text-sm">Couldn't load replies.</p>
-                            ) : (cache?.replies || []).length === 0 ? (
-                              <p className="text-gray-400 text-sm italic mb-2">No replies yet.</p>
-                            ) : (
-                              <div className="space-y-3 mb-2">
+                              <p className="text-sm text-red-700 mb-5">Replies could not be loaded.</p>
+                            ) : (cache?.replies || []).length > 0 && (
+                              <div className="mb-5 pl-4 border-l-2 border-bloom-teal space-y-3">
                                 {cache.replies.slice(0, 2).map((r) => (
-                                  <div key={r.id} className="text-sm">
-                                    <span className="font-semibold text-[#0e3b5e]">{r.name}: </span>
-                                    <span className="text-gray-600">
-                                      {r.body.length > 140 ? `${r.body.slice(0, 140)}…` : r.body}
-                                    </span>
-                                  </div>
+                                  <p key={r.id} className="text-sm text-gray-800 leading-relaxed">
+                                    <span className="font-bold text-bloom-navy">{r.name}</span>{' '}
+                                    {r.body.length > 160 ? `${r.body.slice(0, 160)}…` : r.body}
+                                  </p>
                                 ))}
                                 {q.reply_count > 2 && (
-                                  <p className="text-xs text-gray-400">
-                                    + {q.reply_count - 2} more {q.reply_count - 2 === 1 ? 'reply' : 'replies'}
-                                  </p>
+                                  <p className="text-xs font-semibold text-gray-600">and {replyLabel(q.reply_count - 2)} more</p>
                                 )}
                               </div>
                             )}
 
-                            <Link
-                              to={`/community/${q.id}`}
-                              className="inline-flex items-center gap-1 text-[#00cba9] font-bold text-sm hover:underline no-underline mt-2"
-                            >
-                              View full thread &amp; reply →
+                            <Link to={`/community/${q.id}`} className="group text-bloom-teal-deep font-bold inline-flex items-center gap-2">
+                              {unanswered ? 'Open the thread and answer' : 'Read the thread'} <FaArrowRight size={12} className="group-hover:translate-x-1 transition-transform" />
                             </Link>
                           </div>
                         </motion.div>
