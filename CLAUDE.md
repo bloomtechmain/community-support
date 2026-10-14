@@ -17,7 +17,6 @@ This is the **standalone BloomAudit Community Support app** — a public Q&A for
 | Language | JavaScript (no TypeScript) |
 | DB | PostgreSQL (via `pg`), shared with the other two apps |
 | Auth | None — this app is fully public, no login anywhere |
-| Deploy | Railway (not the shared EC2 host the other three apps use) |
 
 ## Folder Structure
 
@@ -30,7 +29,7 @@ community-support/
 └── Dockerfile        — multi-stage: builds frontend, then Express serves API + built frontend from one process/service
 ```
 
-Only one Railway service is needed — the backend serves the built frontend, so there's one Dockerfile, one deployment, one subdomain.
+Only one service is needed — the backend serves the built frontend, so there's one Dockerfile, one deployment, one subdomain.
 
 ## Commands
 
@@ -65,11 +64,29 @@ This app is intentionally public-read/public-write only:
 - Anti-spam/rate-limiting was explicitly declined for v1 (inherited decision from the original website implementation) — do not add any without checking first
 - Do not add moderation or KB-editing endpoints here — those stay in `apps/dashboard`
 
-## Deploy (Railway)
+## PDF guides (mirrored from apps/website)
 
-- `DATABASE_URL` is injected automatically by Railway when a Postgres reference is linked to this service — point it at the same shared Postgres instance the other apps use (requires that instance to be reachable from Railway's network).
-- `/health` — used for Railway's health check.
-- No GitHub Actions workflow — Railway builds and deploys directly from this directory (root-directory-scoped to `apps/community-support`), watching only changes under this path.
+The Knowledge Base page (`/kb`) mirrors the website's `/resources/guides` page, including its downloadable PDFs.
+- The PDFs are **copies** in `frontend/public/guides/` (same paths as `apps/website/frontend/public/guides/`), and the two screenshots are copies in `frontend/src/assets/screenshots/`. They are copied, not linked, so downloads stay same-origin.
+- The guide list (titles, descriptions, file paths) lives in `frontend/src/guides.js`, which the KB page and its search both read.
+- Whenever a PDF or the guide list changes on the website, re-copy the files and update `guides.js` here too.
+
+## Runtime
+
+- `DATABASE_URL` must point at the same shared Postgres instance the other apps use.
+- `/health` — health check endpoint (also used by the Dockerfile `HEALTHCHECK`).
+
+## Deploy (AWS, own small host)
+
+Runs on its **own** EC2 host, deliberately separate from the shared BloomAudit host (that one is a 1 GB t3.micro with little memory headroom).
+
+- **Account / region:** BloomAudit AWS account `874456855550`, `ap-southeast-1`, same VPC as the shared RDS.
+- **Host:** `bloomaudit-community-support` (`i-0504673370238d4af`), t4g.micro arm64, Amazon Linux 2023, Elastic IP `54.254.165.16`. First-boot setup is `deploy/user-data.sh` (1 GB swap + Docker).
+- **Containers:** `deploy/docker-compose.yml` — the app plus Caddy, which terminates HTTPS for `community.bloomaudit.com` and renews the certificate itself (`deploy/Caddyfile`).
+- **Network:** security group `bloomaudit-community-sg` allows only 80/443 in — **no SSH**. The RDS security group allows 5432 from that group only.
+- **Secrets:** `DATABASE_URL` lives in SSM Parameter Store as SecureString `/community-support/DATABASE_URL`; the host's `/opt/community-support/.env` is written from it. Never commit it.
+- **CI/CD:** `.github/workflows/deploy.yml` — every push to `main` builds the arm64 image on GitHub's runners, pushes to ECR repo `community-support`, then deploys via **SSM Run Command** (no SSH key anywhere) and checks `/health` inside the host and publicly. GitHub assumes IAM role `bloomaudit-community-github-actions`, which only trusts this repo's `production` environment and can only push to that ECR repo and send commands to that one instance.
+- **Getting a shell on the host:** `aws ssm start-session --target i-0504673370238d4af --region ap-southeast-1` (needs the Session Manager plugin), not SSH.
 
 ## Git & Committing
 

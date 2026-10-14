@@ -3,10 +3,9 @@ FROM node:20-alpine AS frontend-builder
 
 # Vite inlines VITE_* vars at build time, so the production value has to be set
 # here rather than relying on frontend/.env (which only applies to local `vite
-# dev` and holds the localhost default) — otherwise "Back to BloomAudit" links
-# bake in http://localhost:5173. Override via a Railway build variable of the
-# same name if this ever needs to change.
-ARG VITE_WEBSITE_URL=https://app.bloomaudit.com
+# dev` and is gitignored). Every "Visit BloomAudit" shortcut uses it. Override
+# with `--build-arg VITE_WEBSITE_URL=...` if this ever needs to change.
+ARG VITE_WEBSITE_URL=https://bloomaudit.com
 ENV VITE_WEBSITE_URL=$VITE_WEBSITE_URL
 
 WORKDIR /app/frontend

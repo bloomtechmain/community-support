@@ -1,0 +1,55 @@
+# Community Support — runs alone on its own small EC2 host (t4g.micro, arm64),
+# separate from the shared BloomAudit host so it can't add memory pressure there.
+#
+#   app    — Express API + built frontend (this repo's Dockerfile), port 5100,
+#            reachable only on the compose network
+#   caddy  — public entry point on 80/443; gets and renews the HTTPS
+#            certificate for community.bloomaudit.com by itself
+#
+# ECR_REGISTRY is substituted by the deploy workflow before this file is
+# written to the host. Secrets live in .env beside this file (never in git).
+
+services:
+  app:
+    image: ${ECR_REGISTRY}/community-support:latest
+    container_name: community-support
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - PORT=5100
+      # 1 GB host shared with Caddy + Docker: cap the V8 heap below the container limit
+      - NODE_OPTIONS=--max-old-space-size=160
+    mem_limit: 256m
+    expose:
+      - "5100"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    mem_limit: 64m
+    depends_on:
+      - app
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  caddy_data:     # certificates — must persist across restarts or Let's Encrypt rate limits bite
+  caddy_config:
