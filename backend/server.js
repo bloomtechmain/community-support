@@ -26,7 +26,7 @@ app.use('/api/community', communityRoutes);
 app.use('/api/kb', kbRoutes);
 
 // In production the frontend is built into ../frontend/dist and served
-// straight from this same Express process — one Railway service, one
+// straight from this same Express process — one service, one
 // subdomain, instead of splitting frontend/backend into two deployments.
 const frontendDist = path.join(__dirname, '..', 'frontend', 'dist');
 app.use(express.static(frontendDist));

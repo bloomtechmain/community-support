@@ -1,8 +1,8 @@
 const { Pool } = require('pg');
 require('dotenv').config();
 
-// Railway injects DATABASE_URL natively when a Postgres reference is linked to
-// this service — same shared instance used by apps/dashboard and apps/audit-app.
+// DATABASE_URL points at the same shared Postgres instance used by
+// apps/dashboard and apps/audit-app.
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
